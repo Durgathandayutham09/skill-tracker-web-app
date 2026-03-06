@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkillTracker – Goal Setting</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=Space+Grotesk:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #fffbf5;
+    --card: #fff;
+    --accent: #e85d04;
+    --accent2: #2d2d8f;
+    --text: #1c1c1c;
+    --muted: #888;
+    --border: #ece8e0;
+    --done: #16a34a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Space Grotesk', sans-serif; background: var(--bg); color: var(--text); }
+
+  header { background: #1c1c1c; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+  .brand { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; color: #fff; }
+  .brand span { color: #7c7cff; }
+  .nav-links { display: flex; gap: 20px; }
+  .nav-links a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+  .nav-links a:hover, .nav-links a.active { color: #fff; }
+
+  .hero { background: linear-gradient(135deg, #1c1c1c 0%, #2d2d8f 100%); padding: 48px 32px; }
+  .hero h2 { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; color: #fff; }
+  .hero p { color: rgba(255,255,255,0.6); margin-top: 6px; }
+  .stats-row { display: flex; gap: 18px; margin-top: 28px; flex-wrap: wrap; }
+  .stat-chip { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 14px 22px; min-width: 110px; }
+  .stat-chip .num { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: #fff; }
+  .stat-chip .lbl { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+
+  .main { padding: 32px; max-width: 960px; margin: 0 auto; }
+  .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .top-bar h3 { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; }
+
+  .add-btn { padding: 11px 22px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .add-btn:hover { box-shadow: 0 6px 20px rgba(232,93,4,0.35); transform: translateY(-1px); }
+
+  .goals-list { display: flex; flex-direction: column; gap: 14px; }
+  .empty-msg { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 15px; }
+  .empty-msg .icon { font-size: 48px; margin-bottom: 12px; }
+
+  .goal-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 22px 24px; display: grid; grid-template-columns: 34px 1fr auto; gap: 16px; align-items: start; transition: box-shadow 0.2s; }
+  .goal-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.07); }
+
+  .check-circle { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all 0.2s; flex-shrink: 0; margin-top: 2px; background: white; user-select: none; }
+  .check-circle.done { background: var(--done); border-color: var(--done); color: white; }
+
+  .skill-ref { font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
+  .goal-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 8px; }
+  .goal-title.striked { text-decoration: line-through; color: var(--muted); }
+  .goal-desc { font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: 12px; }
+
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; padding: 4px 11px; border-radius: 20px; }
+  .chip-due { background: #fef3c7; color: #92400e; }
+  .chip-overdue { background: #fee2e2; color: #991b1b; }
+  .chip-completed { background: #dcfce7; color: #166534; }
+  .chip-high { background: #fee2e2; color: #991b1b; }
+  .chip-medium { background: #fef9c3; color: #713f12; }
+  .chip-low { background: #f0fdf4; color: #166534; }
+
+  .prog-row { margin-top: 12px; }
+  .prog-label-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; color: var(--muted); }
+  .prog-label-row span:last-child { font-weight: 700; color: var(--text); }
+  .prog-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #2d2d8f, #7c7cff); }
+
+  .card-actions { display: flex; gap: 4px; }
+  .icon-btn { background: none; border: none; cursor: pointer; font-size: 17px; padding: 6px 8px; border-radius: 8px; transition: background 0.2s; line-height: 1; }
+  .icon-btn:hover { background: var(--border); }
+
+  /* MODAL */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(4px); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 20px; visibility: hidden; opacity: 0; transition: opacity 0.25s, visibility 0.25s; }
+  .overlay.show { visibility: visible; opacity: 1; }
+  .modal { background: #fff; border-radius: 20px; padding: 32px; width: 100%; max-width: 500px; transform: translateY(20px); transition: transform 0.25s; max-height: 90vh; overflow-y: auto; }
+  .overlay.show .modal { transform: translateY(0); }
+
+  .modal-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; margin-bottom: 22px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; color: var(--muted); font-weight: 500; margin-bottom: 6px; }
+  .field input, .field select, .field textarea { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-family: 'Space Grotesk', sans-serif; font-size: 14px; color: var(--text); background: #fff; outline: none; transition: border-color 0.2s; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent2); }
+  .field textarea { resize: vertical; min-height: 72px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .range-group { display: flex; align-items: center; gap: 12px; }
+  .range-group input[type=range] { flex: 1; accent-color: var(--accent2); cursor: pointer; }
+  .range-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 16px; min-width: 42px; text-align: right; }
+  .modal-footer { display: flex; gap: 10px; margin-top: 22px; }
+  .modal-footer button { flex: 1; padding: 13px; border-radius: 10px; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s; }
+  .btn-cancel { background: var(--border); color: var(--text); }
+  .btn-cancel:hover { background: #ddd; }
+  .btn-save { background: var(--accent2); color: #fff; }
+  .btn-save:hover { box-shadow: 0 5px 18px rgba(45,45,143,0.4); }
+  .btn-save:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+
+  .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1c1c1c; color: #fff; padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 500; z-index: 9999; opacity: 0; transition: all 0.3s; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Skill<span>Tracker</span></div>
+  <nav class="nav-links">
+  <a href="module1-auth.html">Home</a>
+  <a href="module2-addskills.html">Skills</a>
+  <a href="module3-goals.html" class="active">Goals</a>
+    <a href="module4-progress.html">Progress</a>
+    <a href="module5-recommendations.html">Discover</a>
+    <a href="module6-profile.html">Profile</a>
+  </nav>
+</header>
+
+<div class="hero">
+  <h2>🎯 Learning Goals</h2>
+  <p>Set targets, track progress, and celebrate achievements</p>
+  <div class="stats-row">
+    <div class="stat-chip"><div class="num" id="sTotal">0</div><div class="lbl">Total Goals</div></div>
+    <div class="stat-chip"><div class="num" id="sDone">0</div><div class="lbl">Completed</div></div>
+    <div class="stat-chip"><div class="num" id="sActive">0</div><div class="lbl">In Progress</div></div>
+    <div class="stat-chip"><div class="num" id="sOverdue">0</div><div class="lbl">Overdue</div></div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="top-bar">
+    <h3>All Goals</h3>
+    <button class="add-btn" id="openAddBtn">+ Add Goal</button>
+  </div>
+  <div class="goals-list" id="goalsList">
+    <div class="empty-msg"><div class="icon">🎯</div><p>Loading…</p></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modalBox">
+    <div class="modal-title" id="modalTitle">Add New Goal</div>
+
+    <div class="field">
+      <label>Goal Title <span style="color:red">*</span></label>
+      <input type="text" id="fTitle" placeholder="e.g. Master React Hooks" />
+    </div>
+    <div class="field">
+      <label>Related Skill</label>
+      <input type="text" id="fSkill" placeholder="e.g. React.js" />
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="fDesc" placeholder="What do you want to achieve?"></textarea>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Due Date <span style="color:red">*</span></label>
+        <input type="date" id="fDue" />
+      </div>
+      <div class="field">
+        <label>Priority</label>
+        <select id="fPriority">
+          <option value="high">🔴 High</option>
+          <option value="medium" selected>🟡 Medium</option>
+          <option value="low">🟢 Low</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Progress — <span id="progDisplay">0%</span></label>
+      <div class="range-group">
+        <input type="range" id="fProgress" min="0" max="100" value="0" />
+        <div class="range-num" id="progNum">0%</div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" id="cancelBtn">Cancel</button>
+      <button class="btn-save" id="saveBtn">Save Goal</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase compat SDK (plain scripts, NOT modules) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+/* ===================================================
+   SKILLTRACKER — GOAL MODULE  (plain ES5-style JS)
+   =================================================== */
+
+/* ---------- Firebase init ---------- */
+firebase.initializeApp({
+ apiKey: "AIzaSyDYpg5lNx6IDpddAreb2DR3bvV-eHmWLfM",
+  authDomain: "skill-tracker-web-app.firebaseapp.com",
+  projectId: "skill-tracker-web-app",
+  storageBucket: "skill-tracker-web-app.firebasestorage.app",
+  messagingSenderId: "799111862171",
+  appId: "1:799111862171:web:9fc8c506abea6a6e03b33e"
+});
+
+var db   = firebase.firestore();
+var auth = firebase.auth();
+
+/* ---------- App state ---------- */
+var currentUser = null;
+var editingId   = null;
+var goals       = [];
+
+/* ---------- Auth ---------- */
+auth.onAuthStateChanged(function(user) {
+
+  if (!user) {
+    window.location.href = "module1-auth.html";
+  } else {
+    currentUser = user;
+    loadFirebase();
+  }
+
+});
+
+/* ---------- Data loading ---------- */
+function loadFirebase() {
+  db.collection('users').doc(currentUser.uid).collection('goals')
+    .get()
+    .then(function(snap) {
+      goals = snap.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); });
+      render();
+    })
+    .catch(function() { loadLocal(); });
+}
+
+function loadLocal() {
+  goals = [];
+  render();
+}
+
+function persist() {
+  localStorage.setItem('st_goals', JSON.stringify(goals));
+}
+
+function getDemo() {
+  return [
+    { id:'d1', title:'Complete JavaScript Basics',  skill:'JavaScript',     description:'Finish all JS fundamentals — closures, async, ES6+.', due:'2025-07-30', priority:'high',   progress:70,  completed:false, createdAt:Date.now() },
+    { id:'d2', title:'Build 3 React Projects',       skill:'React.js',       description:'Build portfolio projects using React & Firebase.',    due:'2025-09-15', priority:'high',   progress:30,  completed:false, createdAt:Date.now() },
+    { id:'d3', title:'Read Communication Books',     skill:'Public Speaking', description:'Improve communication and presentation skills.',      due:'2025-03-01', priority:'medium', progress:100, completed:true,  createdAt:Date.now() },
+    { id:'d4', title:'Complete DSA Course',           skill:'Data Structures', description:'Finish Leetcode DSA series and practice 50 problems.', due:'2025-08-20', priority:'medium', progress:45,  completed:false, createdAt:Date.now() }
+  ];
+}
+
+/* ---------- Render ---------- */
+function render() {
+  var today = new Date().toISOString().split('T')[0];
+
+  document.getElementById('sTotal').textContent   = goals.length;
+  document.getElementById('sDone').textContent     = goals.filter(function(g){ return g.completed; }).length;
+  document.getElementById('sActive').textContent   = goals.filter(function(g){ return !g.completed && g.due >= today; }).length;
+  document.getElementById('sOverdue').textContent  = goals.filter(function(g){ return !g.completed && g.due < today; }).length;
+
+  var list = document.getElementById('goalsList');
+
+  if (!goals.length) {
+    list.innerHTML = '<div class="empty-msg"><div class="icon">🎯</div><p>No goals yet. Click <strong>+ Add Goal</strong> to get started!</p></div>';
+    return;
+  }
+
+  var html = '';
+  for (var i = 0; i < goals.length; i++) {
+    var g = goals[i];
+    var overdue = !g.completed && g.due < today;
+
+    var dueChip = g.completed
+      ? '<span class="chip chip-completed">&#10003; Completed</span>'
+      : overdue
+        ? '<span class="chip chip-overdue">&#9888; Overdue &middot; ' + g.due + '</span>'
+        : '<span class="chip chip-due">&#128197; ' + g.due + '</span>';
+
+    var priIcon  = g.priority === 'high' ? '&#128308;' : g.priority === 'medium' ? '&#128993;' : '&#128994;';
+    var priClass = 'chip-' + g.priority;
+    var priChip  = '<span class="chip ' + priClass + '">' + priIcon + ' ' + g.priority + '</span>';
+
+    html +=
+      '<div class="goal-card">'
+    +   '<div class="check-circle' + (g.completed ? ' done' : '') + '" data-id="' + g.id + '" onclick="toggleDone(\'' + g.id + '\')">' + (g.completed ? '&#10003;' : '') + '</div>'
+    +   '<div>'
+    +     (g.skill ? '<div class="skill-ref">&#128218; ' + esc(g.skill) + '</div>' : '')
+    +     '<div class="goal-title' + (g.completed ? ' striked' : '') + '">' + esc(g.title) + '</div>'
+    +     (g.description ? '<div class="goal-desc">' + esc(g.description) + '</div>' : '')
+    +     '<div class="chips">' + dueChip + ' ' + priChip + '</div>'
+    +     '<div class="prog-row">'
+    +       '<div class="prog-label-row"><span>Progress</span><span>' + (g.progress || 0) + '%</span></div>'
+    +       '<div class="prog-track"><div class="prog-fill" style="width:' + (g.progress || 0) + '%"></div></div>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="card-actions">'
+    +     '<button class="icon-btn" onclick="openEdit(\'' + g.id + '\')" title="Edit">&#9999;&#65039;</button>'
+    +     '<button class="icon-btn" onclick="deleteGoal(\'' + g.id + '\')" title="Delete">&#128465;&#65039;</button>'
+    +   '</div>'
+    + '</div>';
+  }
+
+  list.innerHTML = html;
+}
+
+/* ---------- CRUD ---------- */
+function saveGoal() {
+  var title = document.getElementById('fTitle').value.trim();
+  var due   = document.getElementById('fDue').value.trim();
+
+  if (!title) { toast('Please enter a goal title.'); document.getElementById('fTitle').focus(); return; }
+  if (!due)   { toast('Please select a due date.');  document.getElementById('fDue').focus();   return; }
+
+  var existing = null;
+  if (editingId) {
+    for (var i = 0; i < goals.length; i++) {
+      if (goals[i].id === editingId) { existing = goals[i]; break; }
+    }
+  }
+
+  var data = {
+    title:       title,
+    skill:       document.getElementById('fSkill').value.trim(),
+    description: document.getElementById('fDesc').value.trim(),
+    due:         due,
+    priority:    document.getElementById('fPriority').value,
+    progress:    parseInt(document.getElementById('fProgress').value) || 0,
+    completed:   existing ? Boolean(existing.completed) : false,
+    createdAt:   existing ? (existing.createdAt || Date.now()) : Date.now()
+  };
+
+  var btn = document.getElementById('saveBtn');
+  btn.disabled    = true;
+  btn.textContent = 'Saving…';
+
+  if (currentUser) {
+    var col = db.collection('users').doc(currentUser.uid).collection('goals');
+    var p   = editingId ? col.doc(editingId).set(data) : col.add(data);
+    p.then(function() {
+      toast(editingId ? 'Goal updated!' : 'Goal added!');
+      closeModal();
+      loadFirebase();
+    }).catch(function(err) {
+      toast('Save failed: ' + err.message);
+      btn.disabled = false;
+      btn.textContent = 'Save Goal';
+    });
+  } else {
+    if (editingId) {
+      for (var j = 0; j < goals.length; j++) {
+        if (goals[j].id === editingId) { goals[j] = Object.assign({ id: editingId }, data); break; }
+      }
+    } else {
+      data.id = 'g' + Date.now();
+      goals.unshift(data);
+    }
+    persist();
+    render();
+    toast(editingId ? 'Goal updated!' : 'Goal added!');
+    closeModal();
+    btn.disabled    = false;
+    btn.textContent = 'Save Goal';
+  }
+}
+
+function deleteGoal(id) {
+  if (!confirm('Delete this goal? This cannot be undone.')) return;
+  if (currentUser) {
+    db.collection('users').doc(currentUser.uid).collection('goals').doc(id)
+      .delete()
+      .then(function() { toast('Goal deleted.'); loadFirebase(); })
+      .catch(function(err) { toast('Error: ' + err.message); });
+  } else {
+    goals = goals.filter(function(g) { return g.id !== id; });
+    persist();
+    render();
+    toast('Goal deleted.');
+  }
+}
+
+function toggleDone(id) {
+  if (currentUser) {
+    var g = null;
+    for (var i = 0; i < goals.length; i++) { if (goals[i].id === id) { g = goals[i]; break; } }
+    if (!g) return;
+    var nd = !g.completed;
+    db.collection('users').doc(currentUser.uid).collection('goals').doc(id)
+      .update({ completed: nd, progress: nd ? 100 : g.progress })
+      .then(function() { loadFirebase(); })
+      .catch(function(err) { toast('Error: ' + err.message); });
+  } else {
+    for (var j = 0; j < goals.length; j++) {
+      if (goals[j].id === id) {
+        goals[j].completed = !goals[j].completed;
+        if (goals[j].completed) goals[j].progress = 100;
+        break;
+      }
+    }
+    persist();
+    render();
+  }
+}
+
+/* ---------- Modal ---------- */
+function openAdd() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Add New Goal';
+  document.getElementById('fTitle').value    = '';
+  document.getElementById('fSkill').value    = '';
+  document.getElementById('fDesc').value     = '';
+  document.getElementById('fDue').value      = '';
+  document.getElementById('fPriority').value = 'medium';
+  document.getElementById('fProgress').value = 0;
+  document.getElementById('progDisplay').textContent = '0%';
+  document.getElementById('progNum').textContent     = '0%';
+  resetSaveBtn();
+  document.getElementById('overlay').classList.add('show');
+  setTimeout(function(){ document.getElementById('fTitle').focus(); }, 100);
+}
+
+function openEdit(id) {
+  var g = null;
+  for (var i = 0; i < goals.length; i++) { if (goals[i].id === id) { g = goals[i]; break; } }
+  if (!g) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent  = 'Edit Goal';
+  document.getElementById('fTitle').value            = g.title || '';
+  document.getElementById('fSkill').value            = g.skill || '';
+  document.getElementById('fDesc').value             = g.description || '';
+  document.getElementById('fDue').value              = g.due || '';
+  document.getElementById('fPriority').value         = g.priority || 'medium';
+  document.getElementById('fProgress').value         = g.progress || 0;
+  document.getElementById('progDisplay').textContent = (g.progress || 0) + '%';
+  document.getElementById('progNum').textContent     = (g.progress || 0) + '%';
+  resetSaveBtn();
+  document.getElementById('overlay').classList.add('show');
+  setTimeout(function(){ document.getElementById('fTitle').focus(); }, 100);
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('show');
+  editingId = null;
+}
+
+function resetSaveBtn() {
+  var b = document.getElementById('saveBtn');
+  b.disabled    = false;
+  b.textContent = 'Save Goal';
+}
+
+/* ---------- Helpers ---------- */
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+function esc(s) {
+  return String(s || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ---------- DOM ready ---------- */
+window.addEventListener('DOMContentLoaded', function() {
+
+  document.getElementById('openAddBtn').addEventListener('click', openAdd);
+  document.getElementById('cancelBtn').addEventListener('click',  closeModal);
+  document.getElementById('saveBtn').addEventListener('click',    saveGoal);
+
+  document.getElementById('overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  document.getElementById('fProgress').addEventListener('input', function() {
+    var v = this.value + '%';
+    document.getElementById('progDisplay').textContent = v;
+    document.getElementById('progNum').textContent     = v;
+  });
+
+  document.getElementById('modalBox').addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { closeModal(); }
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'BUTTON') {
+      e.preventDefault();
+      saveGoal();
+    }
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkillTracker – Skill Management</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #f5f4f0;
+    --card: #ffffff;
+    --accent: #2d2d8f;
+    --accent2: #e85d04;
+    --text: #1a1a2e;
+    --muted: #7b7b8e;
+    --border: #e2e2ec;
+    --tech: #2d2d8f;
+    --soft: #e85d04;
+    --academic: #0ea5a0;
+    --tech-bg: #eeeeff;
+    --soft-bg: #fff0e6;
+    --academic-bg: #e6faf9;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  header {
+    background: var(--text);
+    padding: 16px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .brand { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; color: #fff; }
+  .brand span { color: #7c7cff; }
+  .nav-links { display: flex; gap: 20px; }
+  .nav-links a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+  .nav-links a:hover, .nav-links a.active { color: #fff; }
+
+  .page-header {
+    background: var(--text); padding: 40px 32px 60px;
+    position: relative; overflow: hidden;
+  }
+  .page-header::after {
+    content: 'SKILLS';
+    position: absolute; right: -20px; bottom: -20px;
+    font-family: 'Syne', sans-serif; font-size: 120px; font-weight: 800;
+    color: rgba(255,255,255,0.03); pointer-events: none; line-height: 1;
+  }
+  .page-header h2 { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; color: #fff; }
+  .page-header p { color: rgba(255,255,255,0.5); margin-top: 6px; font-size: 15px; }
+
+  .main { padding: 32px; max-width: 1100px; margin: 0 auto; }
+
+  .top-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+  }
+
+  .filter-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .filter-tab {
+    padding: 8px 18px; border-radius: 30px;
+    border: 1.5px solid var(--border); background: white;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+  }
+  .filter-tab.active-all { border-color: var(--text); background: var(--text); color: white; }
+  .filter-tab.active-tech { border-color: var(--tech); background: var(--tech); color: white; }
+  .filter-tab.active-soft { border-color: var(--soft); background: var(--soft); color: white; }
+  .filter-tab.active-academic { border-color: var(--academic); background: var(--academic); color: white; }
+
+  .add-btn {
+    padding: 10px 22px; background: var(--accent2);
+    color: white; border: none; border-radius: 10px;
+    font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .add-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(232,93,4,0.35); }
+
+  .skills-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
+  }
+
+  .skill-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 22px;
+    transition: all 0.2s; position: relative; overflow: hidden;
+  }
+  .skill-card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+  .skill-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 4px; border-radius: 16px 0 0 16px;
+  }
+  .skill-card[data-cat="technical"]::before { background: var(--tech); }
+  .skill-card[data-cat="soft"]::before { background: var(--soft); }
+  .skill-card[data-cat="academic"]::before { background: var(--academic); }
+
+  .skill-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+  .skill-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 17px; }
+  .skill-actions { display: flex; gap: 6px; }
+  .icon-btn { background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px; border-radius: 6px; transition: background 0.2s; }
+  .icon-btn:hover { background: var(--border); }
+
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+  .badge-technical { background: var(--tech-bg); color: var(--tech); }
+  .badge-soft { background: var(--soft-bg); color: var(--soft); }
+  .badge-academic { background: var(--academic-bg); color: var(--academic); }
+
+  .skill-desc { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+
+  .progress-wrap { margin-bottom: 6px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
+  .progress-bar-bg { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+  .technical-fill { background: linear-gradient(90deg, var(--tech), #7c7cff); }
+  .soft-fill { background: linear-gradient(90deg, var(--soft), #ff8c42); }
+  .academic-fill { background: linear-gradient(90deg, var(--academic), #2dd4bf); }
+
+  .empty-state {
+    grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--muted);
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+  /* MODAL */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(10,10,20,0.6);
+    backdrop-filter: blur(4px); z-index: 100;
+    display: none; align-items: center; justify-content: center;
+  }
+  .modal-bg.open { display: flex; animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+  .modal {
+    background: white; border-radius: 20px; padding: 32px;
+    width: 100%; max-width: 480px; margin: 20px;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+  .modal h3 { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; margin-bottom: 22px; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 11px 14px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text);
+    outline: none; transition: border-color 0.2s;
+    background: white;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+  .form-group textarea { resize: vertical; min-height: 70px; }
+
+  .range-wrap { display: flex; align-items: center; gap: 12px; }
+  .range-wrap input[type=range] { flex: 1; accent-color: var(--accent); }
+  .range-val { font-weight: 600; font-size: 16px; min-width: 36px; text-align: center; }
+
+  .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+  .modal-btns button { flex: 1; padding: 12px; border-radius: 10px; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; border: none; }
+  .btn-cancel { background: var(--border); color: var(--text); }
+  .btn-save { background: var(--accent); color: white; }
+  .btn-save:hover { box-shadow: 0 5px 15px rgba(45,45,143,0.4); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Skill<span>Tracker</span></div>
+  <nav class="nav-links">
+    <a href="module1-auth.html">Home</a>
+    <a href="#" class="active">Skills</a>
+    <a href="module3-goals.html">Goals</a>
+    <a href="module4-progress.html">Progress</a>
+    <a href="module5-recommendations.html">Discover</a>
+    <a href="module6-profile.html">Profile</a>
+  </nav>
+</header>
+
+<div class="page-header">
+  <h2>My Skills</h2>
+  <p>Manage and track all your skills in one place</p>
+  <p id="welcomeUser" style="color:white; margin-top:10px;"></p>
+</div>
+
+<div class="main">
+  <div class="top-bar">
+    <div class="filter-tabs">
+      <button class="filter-tab active-all" onclick="filterSkills('all', this)">All</button>
+      <button class="filter-tab" onclick="filterSkills('technical', this)">💻 Technical</button>
+      <button class="filter-tab" onclick="filterSkills('soft', this)">🤝 Soft Skills</button>
+      <button class="filter-tab" onclick="filterSkills('academic', this)">🎓 Academic</button>
+    </div>
+    <button class="add-btn" onclick="openModal()">+ Add Skill</button>
+  </div>
+
+  <div class="skills-grid" id="skillsGrid"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-bg" id="modalBg" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <h3 id="modalTitle">Add New Skill</h3>
+    <div class="form-group">
+      <label>Skill Name *</label>
+      <input type="text" id="skillName" placeholder="e.g. React.js" />
+    </div>
+    <div class="form-group">
+      <label>Category *</label>
+      <select id="skillCat">
+        <option value="technical">💻 Technical</option>
+        <option value="soft">🤝 Soft Skill</option>
+        <option value="academic">🎓 Academic</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="skillDesc" placeholder="Briefly describe this skill..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Current Progress: <span id="progressDisplay">0%</span></label>
+      <div class="range-wrap">
+        <input type="range" id="skillProgress" min="0" max="100" value="0" oninput="updateProgressDisplay(this.value)" />
+        <div class="range-val" id="rangeVal">0%</div>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" id="saveBtn">Save Skill</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+ const firebaseConfig = {
+  apiKey: "AIzaSyDYpg5lNx6IDpddAreb2DR3bvV-eHmWLfM",
+  authDomain: "skill-tracker-web-app.firebaseapp.com",
+  projectId: "skill-tracker-web-app",
+  storageBucket: "skill-tracker-web-app.firebasestorage.app",
+  messagingSenderId: "799111862171",
+  appId: "1:799111862171:web:9fc8c506abea6a6e03b33e"
+};
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  let currentUser = null;
+  
+
+  onAuthStateChanged(auth, user => {
+  currentUser = user;
+
+  if (user) {
+    document.getElementById("welcomeUser").innerText =
+      "Welcome, " + user.displayName;
+    loadSkills();
+  } else {
+    window.location.href = "module1-auth.html";
+  }
+});
+
+  window.saveSkill = async function() {
+    const name = document.getElementById('skillName').value.trim();
+    const cat = document.getElementById('skillCat').value;
+    const desc = document.getElementById('skillDesc').value.trim();
+    const prog = parseInt(document.getElementById('skillProgress').value);
+    if (!name) { alert('Please enter a skill name.'); return; }
+
+    const data = { name, category: cat, description: desc, progress: prog, createdAt: new Date() };
+
+    if (currentUser) {
+      if (editingId) {
+        await updateDoc(doc(db, 'users', currentUser.uid, 'skills', editingId), data);
+      } else {
+        await addDoc(collection(db, 'users', currentUser.uid, 'skills'), data);
+      }
+      loadSkills();
+    } else {
+      // localStorage fallback for demo
+      const skills = JSON.parse(localStorage.getItem('demoSkills') || '[]');
+      if (editingId) {
+        const idx = skills.findIndex(s => s.id === editingId);
+        if (idx > -1) skills[idx] = { ...data, id: editingId };
+      } else {
+        skills.push({ ...data, id: Date.now().toString() });
+      }
+      localStorage.setItem('demoSkills', JSON.stringify(skills));
+      loadDemoSkills();
+    }
+    closeModal();
+  };
+
+  window.deleteSkill = async function(id) {
+    if (!confirm('Delete this skill?')) return;
+    if (currentUser) {
+      await deleteDoc(doc(db, 'users', currentUser.uid, 'skills', id));
+      loadSkills();
+    } else {
+      const skills = JSON.parse(localStorage.getItem('demoSkills') || '[]').filter(s => s.id !== id);
+      localStorage.setItem('demoSkills', JSON.stringify(skills));
+      loadDemoSkills();
+    }
+  };
+
+  window.editSkill = function(id) {
+    const skills = currentUser
+      ? window._skills
+      : JSON.parse(localStorage.getItem('demoSkills') || '[]');
+    const skill = skills.find(s => s.id === id);
+    if (!skill) return;
+    editingId = id;
+    document.getElementById('skillName').value = skill.name;
+    document.getElementById('skillCat').value = skill.category;
+    document.getElementById('skillDesc').value = skill.description || '';
+    document.getElementById('skillProgress').value = skill.progress || 0;
+    updateProgressDisplay(skill.progress || 0);
+    document.getElementById('modalTitle').textContent = 'Edit Skill';
+    document.getElementById('modalBg').classList.add('open');
+  };
+
+  async function loadSkills() {
+    if (!currentUser) return;
+    const snap = await getDocs(collection(db, 'users', currentUser.uid, 'skills'));
+    window._skills = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderSkills(window._skills);
+  }
+
+  function loadDemoSkills() {
+    const stored = localStorage.getItem('demoSkills');
+    const demo = stored ? JSON.parse(stored) : [
+      { id: '1', name: 'JavaScript', category: 'technical', description: 'Core language for web development.', progress: 75 },
+      { id: '2', name: 'Public Speaking', category: 'soft', description: 'Communicating ideas to a large audience.', progress: 55 },
+      { id: '3', name: 'Data Structures', category: 'academic', description: 'Fundamental CS concepts — arrays, trees, graphs.', progress: 65 },
+      { id: '4', name: 'React.js', category: 'technical', description: 'Modern UI library by Meta.', progress: 60 },
+    ];
+    if (!stored) localStorage.setItem('demoSkills', JSON.stringify(demo));
+    window._skills = demo;
+    renderSkills(demo);
+  }
+
+  window.renderSkills = renderSkills;
+  function renderSkills(skills) {
+    const grid = document.getElementById('skillsGrid');
+    if (!skills.length) {
+      grid.innerHTML = `<div class="empty-state"><div class="icon">🎯</div><p>No skills added yet. Click <strong>+ Add Skill</strong> to get started!</p></div>`;
+      return;
+    }
+    grid.innerHTML = skills.map(s => `
+      <div class="skill-card" data-cat="${s.category}" data-id="${s.id}">
+        <div class="skill-top">
+          <div class="skill-title">${s.name}</div>
+          <div class="skill-actions">
+            <button class="icon-btn" onclick="editSkill('${s.id}')" title="Edit">✏️</button>
+            <button class="icon-btn" onclick="deleteSkill('${s.id}')" title="Delete">🗑️</button>
+          </div>
+        </div>
+        <span class="badge badge-${s.category}">${s.category}</span>
+        <p class="skill-desc">${s.description || 'No description added.'}</p>
+        <div class="progress-wrap">
+          <div class="progress-label"><span>Progress</span><span>${s.progress || 0}%</span></div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill ${s.category}-fill" style="width:${s.progress || 0}%"></div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+  document.getElementById("saveBtn").addEventListener("click", async () => {
+    await window.saveSkill();
+  });
+</script>
+
+<script>
+  let currentFilter = 'all';
+  let editingId = null;   // 👈 ADD THIS HERE
+
+  function openModal() {
+    editingId = null;
+    document.getElementById('modalTitle').textContent = 'Add New Skill';
+    document.getElementById('skillName').value = '';
+    document.getElementById('skillCat').value = 'technical';
+    document.getElementById('skillDesc').value = '';
+    document.getElementById('skillProgress').value = 0;
+    updateProgressDisplay(0);
+    document.getElementById('modalBg').classList.add('open');
+  }
+  function closeModal() { document.getElementById('modalBg').classList.remove('open'); }
+  function closeModalOutside(e) { if (e.target === document.getElementById('modalBg')) closeModal(); }
+
+  function updateProgressDisplay(val) {
+    document.getElementById('progressDisplay').textContent = val + '%';
+    document.getElementById('rangeVal').textContent = val + '%';
+  }
+
+  function filterSkills(cat, btn) {
+    currentFilter = cat;
+    document.querySelectorAll('.filter-tab').forEach(t => t.className = 'filter-tab');
+    btn.classList.add('active-' + cat);
+    const skills = window._skills || [];
+    const filtered = cat === 'all' ? skills : skills.filter(s => s.category === cat);
+    renderSkills(filtered);
+  }
+</script>
+</body>
+</html>

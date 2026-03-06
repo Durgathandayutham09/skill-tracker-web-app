@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkillTracker – AI Recommendations</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Epilogue:wght@300;400;500;600&display=swap');
+  :root{
+    --bg:#07070e;--surface:#0f0f18;--surface2:#15151f;
+    --border:#22222e;--accent:#818cf8;--glow:rgba(129,140,248,0.18);
+    --green:#34d399;--orange:#fb923c;--red:#f87171;
+    --text:#eeeef8;--muted:#6b6b80;--card:#111119;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Epilogue',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+  /* NAV */
+  header{background:rgba(7,7,14,0.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:300;}
+  .brand{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;}
+  .brand span{color:var(--accent);}
+  nav a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500;margin-left:24px;transition:color .2s;}
+  nav a:hover,nav a.active{color:var(--text);}
+
+  /* HERO */
+  .hero{background:var(--surface);border-bottom:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:52px 32px 44px;position:relative;overflow:hidden;text-align:center;}
+  .hero::before{content:'';position:absolute;top:-160px;left:50%;transform:translateX(-50%);width:800px;height:800px;border-radius:50%;background:radial-gradient(circle,rgba(129,140,248,0.08) 0%,transparent 65%);pointer-events:none;}
+  .hero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);}
+  .badge{display:inline-flex;align-items:center;gap:8px;background:rgba(129,140,248,0.1);border:1px solid rgba(129,140,248,0.25);color:var(--accent);padding:6px 18px;border-radius:30px;font-size:12px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;margin-bottom:18px;position:relative;z-index:1;}
+  .dot{width:7px;height:7px;background:var(--accent);border-radius:50%;animation:pulse 1.8s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.5)}}
+  .hero h1{font-family:'Syne',sans-serif;font-size:clamp(24px,5vw,44px);font-weight:800;line-height:1.1;letter-spacing:-1px;margin-bottom:10px;position:relative;z-index:1;}
+  .hero h1 span{color:var(--accent);}
+  .hero p{font-size:15px;color:var(--muted);line-height:1.7;max-width:480px;margin-bottom:28px;position:relative;z-index:1;}
+
+  /* SEARCH */
+  .search-box{position:relative;z-index:1;width:100%;max-width:660px;}
+  .search-wrap{display:flex;background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;overflow:hidden;transition:border-color .3s,box-shadow .3s;}
+  .search-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 4px rgba(129,140,248,0.12),0 8px 32px rgba(0,0,0,.4);}
+  .s-icon{display:flex;align-items:center;padding:0 18px;font-size:20px;color:var(--muted);flex-shrink:0;}
+  #careerInput{flex:1;padding:18px 0;background:transparent;border:none;outline:none;font-family:'Epilogue',sans-serif;font-size:16px;color:var(--text);min-width:0;}
+  #careerInput::placeholder{color:var(--muted);}
+  #searchBtn{padding:13px 26px;margin:6px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0;}
+  #searchBtn:hover{background:#6366f1;box-shadow:0 4px 20px var(--glow);}
+  #searchBtn:disabled{opacity:.5;cursor:not-allowed;}
+
+  /* CHIPS */
+  .chips{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;position:relative;z-index:1;}
+  .chip-lbl{font-size:12px;color:var(--muted);padding:6px 0;}
+  .chip{padding:5px 13px;border-radius:20px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:rgba(238,238,248,.7);font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;}
+  .chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(129,140,248,.08);}
+
+  /* USER CTX */
+  .ctx-row{position:relative;z-index:1;margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+  .ctx-pill{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:30px;padding:5px 14px;font-size:12px;color:var(--muted);}
+  .ctx-pill strong{color:var(--text);}
+  .cdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+  .cb{background:var(--accent);}
+  .cg{background:var(--green);}
+
+  /* MAIN */
+  .main{padding:36px 32px;max-width:1100px;margin:0 auto;}
+
+  /* API KEY SETUP CARD */
+  .setup-card{background:rgba(129,140,248,0.06);border:1px solid rgba(129,140,248,0.2);border-radius:16px;padding:24px 28px;margin-bottom:28px;}
+  .setup-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .setup-step{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;font-size:14px;color:var(--muted);line-height:1.6;}
+  .step-num{width:24px;height:24px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;margin-top:1px;}
+  .setup-step strong{color:var(--text);}
+  .setup-step code{background:var(--surface2);border:1px solid var(--border);padding:2px 8px;border-radius:6px;font-size:12px;color:var(--accent);}
+  .key-input-row{display:flex;gap:10px;margin-top:16px;}
+  #apiKeyInput{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 16px;color:var(--text);font-family:'Epilogue',sans-serif;font-size:14px;outline:none;transition:border-color .2s;}
+  #apiKeyInput:focus{border-color:var(--accent);}
+  #apiKeyInput::placeholder{color:var(--muted);}
+  #saveKeyBtn{padding:11px 20px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s;}
+  #saveKeyBtn:hover{background:#6366f1;}
+  .key-status{margin-top:10px;font-size:13px;display:none;}
+  .key-ok{color:var(--green);}
+  .key-err{color:var(--red);}
+
+  /* ERROR BOX */
+  .err-box{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:14px;padding:16px 20px;color:var(--red);font-size:13px;margin-bottom:24px;display:none;line-height:1.6;}
+
+  /* WELCOME */
+  .welcome{text-align:center;padding:60px 20px;}
+  .w-icon{font-size:64px;margin-bottom:16px;opacity:.5;}
+  .w-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;margin-bottom:8px;}
+  .w-sub{color:var(--muted);font-size:14px;line-height:1.7;max-width:400px;margin:0 auto;}
+
+  /* LOADER */
+  .loader{display:none;flex-direction:column;align-items:center;padding:70px 20px;gap:18px;}
+  .loader.show{display:flex;}
+  .orb{position:relative;width:80px;height:80px;}
+  .ring{position:absolute;inset:0;border-radius:50%;border:2px solid transparent;border-top-color:var(--accent);border-right-color:rgba(129,140,248,.3);animation:spin 1.2s linear infinite;}
+  .ring2{inset:8px;border-top-color:transparent;border-bottom-color:var(--green);animation-duration:1.8s;animation-direction:reverse;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .orb-in{position:absolute;inset:16px;background:linear-gradient(135deg,var(--accent),var(--green));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;}
+  .l-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;}
+  .l-career{color:var(--accent);font-size:15px;font-style:italic;margin-top:2px;}
+  .l-steps{display:flex;flex-direction:column;gap:10px;margin-top:6px;}
+  .lstep{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);}
+  .ldot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+  .lstep.done{color:var(--green);}
+  .lstep.done .ldot{background:var(--green);}
+  .lstep.active{color:var(--text);}
+  .lstep.active .ldot{animation:pulse 1s infinite;}
+
+  /* RESULTS */
+  .res-head{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px 26px;margin-bottom:30px;display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+  .rh-title{font-family:'Syne',sans-serif;font-size:21px;font-weight:800;margin-bottom:6px;}
+  .rh-title span{color:var(--accent);}
+  .rh-sub{font-size:13px;color:var(--muted);line-height:1.65;max-width:640px;}
+  .regen{display:flex;align-items:center;gap:7px;padding:9px 16px;background:rgba(129,140,248,.1);border:1px solid rgba(129,140,248,.25);border-radius:10px;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'Epilogue',sans-serif;white-space:nowrap;}
+  .regen:hover{background:rgba(129,140,248,.2);}
+
+  .sec{margin-bottom:38px;}
+  .sec-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:16px;}
+
+  /* REC CARDS */
+  .rec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+  .rec-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;transition:all .25s;position:relative;overflow:hidden;animation:up .4s ease both;}
+  @keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  .rec-card:hover{border-color:rgba(129,140,248,.4);transform:translateY(-4px);box-shadow:0 16px 48px rgba(0,0,0,.5);}
+  .rec-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--green));opacity:0;transition:opacity .3s;}
+  .rec-card:hover::before{opacity:1;}
+  .card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+  .c-icon{width:48px;height:48px;border-radius:13px;background:rgba(129,140,248,.1);display:flex;align-items:center;justify-content:center;font-size:24px;}
+  .pri{padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
+  .p-h{background:rgba(251,146,60,.15);color:var(--orange);border:1px solid rgba(251,146,60,.25);}
+  .p-m{background:rgba(129,140,248,.12);color:var(--accent);border:1px solid rgba(129,140,248,.2);}
+  .p-l{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2);}
+  .c-name{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;margin-bottom:7px;}
+  .c-desc{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:12px;}
+  .why-box{background:rgba(129,140,248,.06);border:1px solid rgba(129,140,248,.13);border-radius:9px;padding:9px 12px;margin-bottom:12px;}
+  .why-lbl{font-size:10px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px;}
+  .why-txt{font-size:12px;color:rgba(238,238,248,.6);line-height:1.55;}
+  .match-row{display:flex;align-items:center;gap:10px;margin-bottom:11px;}
+  .m-lbl{font-size:11px;color:var(--muted);min-width:38px;}
+  .m-track{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+  .m-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--green));}
+  .m-val{font-weight:800;font-size:13px;color:var(--accent);min-width:34px;text-align:right;}
+  .c-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;}
+  .ctag{padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;}
+  .t-hot{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2);}
+  .t-tr{background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.2);}
+  .t-core{background:rgba(129,140,248,.1);color:var(--accent);border:1px solid rgba(129,140,248,.2);}
+  .t-new{background:rgba(52,211,153,.08);color:var(--green);border:1px solid rgba(52,211,153,.2);}
+  .add-btn{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;}
+  .add-btn:hover{background:#6366f1;}
+  .add-btn.added{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3);cursor:default;}
+
+  /* GAPS */
+  .gap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;}
+  .gap-card{background:var(--card);border:1px solid rgba(251,146,60,.2);border-radius:13px;padding:16px;animation:up .4s ease both;}
+  .gap-icon{font-size:22px;margin-bottom:7px;}
+  .gap-name{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:4px;}
+  .gap-why{font-size:12px;color:var(--muted);line-height:1.55;}
+
+  /* ROADMAP */
+  .rm-list{display:flex;flex-direction:column;}
+  .rm-item{display:flex;gap:16px;position:relative;}
+  .rm-item:not(:last-child)::after{content:'';position:absolute;left:18px;top:40px;bottom:0;width:2px;background:var(--border);}
+  .rm-num{width:38px;height:38px;border-radius:50%;background:rgba(129,140,248,.15);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:13px;color:var(--accent);flex-shrink:0;position:relative;z-index:1;}
+  .rm-body{padding-bottom:26px;flex:1;}
+  .rm-phase{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+  .rm-title{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:7px;}
+  .rm-tags{display:flex;gap:6px;flex-wrap:wrap;}
+  .rm-tag{padding:3px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--muted);}
+
+  /* TRENDING */
+  .tr-list{display:flex;flex-direction:column;gap:9px;}
+  .tr-card{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:13px 18px;display:flex;align-items:center;gap:14px;transition:border-color .2s;animation:up .4s ease both;}
+  .tr-card:hover{border-color:rgba(129,140,248,.3);}
+  .tr-rank{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--border);min-width:30px;}
+  .tr-rank.top{color:var(--orange);}
+  .tr-info{flex:1;}
+  .tr-name{font-weight:600;font-size:14px;margin-bottom:2px;}
+  .tr-meta{font-size:12px;color:var(--muted);}
+  .tr-growth{font-size:13px;font-weight:700;color:var(--green);}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px 22px;border-radius:10px;font-size:14px;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media(max-width:680px){
+    header{padding:12px 16px;}nav a{margin-left:14px;}
+    .hero{padding:36px 16px 30px;}.main{padding:22px 16px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Skill<span>Tracker</span></div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="module2-skills.html">Skills</a>
+    <a href="module3-goals.html">Goals</a>
+    <a href="module4-progress.html">Progress</a>
+    <a href="module5-recommendations.html" class="active">Discover</a>
+    <a href="module6-profile.html">Profile</a>
+  </nav>
+</header>
+
+<div class="hero">
+  <div class="badge"><div class="dot"></div>Claude AI · Any Career · Personalised</div>
+  <h1>What's your <span>dream career?</span></h1>
+  <p>Type <strong>any career</strong> — Doctor, Chef, CA, Lawyer, Pilot, YouTuber — get a personalised skill roadmap instantly.</p>
+
+  <div class="search-box">
+    <div class="search-wrap">
+      <div class="s-icon">🎯</div>
+      <input type="text" id="careerInput" placeholder="Type any career… e.g. Chartered Accountant, Nurse, Chef…" autocomplete="off"/>
+      <button id="searchBtn">Get Recommendations →</button>
+    </div>
+  </div>
+
+  <div class="chips">
+    <span class="chip-lbl">Try:</span>
+    <span class="chip" data-v="Chartered Accountant">🧾 CA</span>
+    <span class="chip" data-v="Full Stack Developer">💻 Full Stack</span>
+    <span class="chip" data-v="Doctor MBBS">🩺 Doctor</span>
+    <span class="chip" data-v="UI UX Designer">🎨 UI/UX</span>
+    <span class="chip" data-v="Cybersecurity Analyst">🔒 Cybersecurity</span>
+    <span class="chip" data-v="Lawyer">⚖️ Lawyer</span>
+    <span class="chip" data-v="Data Scientist">📊 Data Scientist</span>
+    <span class="chip" data-v="Chef">👨‍🍳 Chef</span>
+    <span class="chip" data-v="Game Developer">🎮 Game Dev</span>
+    <span class="chip" data-v="Civil Engineer">🏗️ Civil Engineer</span>
+    <span class="chip" data-v="Digital Marketer">📣 Marketer</span>
+    <span class="chip" data-v="YouTuber">🎥 YouTuber</span>
+  </div>
+
+  <div class="ctx-row" id="ctxRow" style="display:none">
+    <div class="ctx-pill"><div class="cdot cb"></div><strong id="sCount">0</strong>&nbsp;skills loaded</div>
+    <div class="ctx-pill"><div class="cdot cg"></div><strong id="gCount">0</strong>&nbsp;active goals</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- API KEY SETUP CARD -->
+  <div class="setup-card" id="setupCard">
+    <div class="setup-title">🔑 Connect Free AI — Paste Your Groq API Key</div>
+    <div class="setup-step"><div class="step-num">1</div><div>Go to <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent)">console.groq.com/keys</a> → Sign up free → Click <strong>Create API Key</strong></div></div>
+    <div class="setup-step"><div class="step-num">2</div><div>Paste the key below and click <strong>Save & Connect</strong> — it's <strong>100% free</strong>, no credit card needed</div></div>
+    <div class="setup-step"><div class="step-num">3</div><div>Open this file via <strong>VS Code Live Server</strong> (right-click → Open with Live Server) for best results</div></div>
+    <div class="key-input-row">
+      <input type="text" id="apiKeyInput" placeholder="gsk_…  paste your free Groq API key here"/>
+      <button id="saveKeyBtn">Save &amp; Connect</button>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:10px;">
+      <button onclick="document.getElementById('apiKeyInput').value=localStorage.getItem('sk_groq')||'';document.getElementById('apiKeyInput').select();" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:6px 14px;color:var(--muted);font-size:12px;cursor:pointer;">👁 Show saved key</button>
+      <button onclick="localStorage.removeItem('sk_groq');location.reload();" style="background:transparent;border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:6px 14px;color:var(--red);font-size:12px;cursor:pointer;">🗑 Clear &amp; re-enter</button>
+    </div>
+    <div class="key-status" id="keyStatus"></div>
+  </div>
+
+  <!-- ERROR BOX -->
+  <div class="err-box" id="errBox"></div>
+
+  <!-- WELCOME -->
+  <div class="welcome" id="welcome">
+    <div class="w-icon">🚀</div>
+    <div class="w-title">Type Any Career to Get Started</div>
+    <div class="w-sub">Claude AI will generate a personalised skill roadmap for absolutely any career you can imagine.</div>
+  </div>
+
+  <!-- LOADER -->
+  <div class="loader" id="loader">
+    <div class="orb"><div class="ring"></div><div class="ring ring2"></div><div class="orb-in">🤖</div></div>
+    <div class="l-title">Claude AI is thinking…</div>
+    <div class="l-career" id="lCareer"></div>
+    <div class="l-steps">
+      <div class="lstep active"><div class="ldot"></div><span>Reading your skill profile…</span></div>
+      <div class="lstep"><div class="ldot"></div><span>Analysing career requirements…</span></div>
+      <div class="lstep"><div class="ldot"></div><span>Building personalised roadmap…</span></div>
+      <div class="lstep"><div class="ldot"></div><span>Fetching 2025 trends…</span></div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results" style="display:none">
+    <div class="res-head">
+      <div>
+        <div class="rh-title" id="rhTitle"></div>
+        <div class="rh-sub" id="rhSub"></div>
+      </div>
+      <button class="regen" id="regenBtn">🔄 Regenerate</button>
+    </div>
+    <div class="sec"><div class="sec-title">⚡ Recommended Skills for You</div><div class="rec-grid" id="recGrid"></div></div>
+    <div class="sec" id="gapSec" style="display:none"><div class="sec-title">⚠️ Skill Gaps to Fill</div><div class="gap-grid" id="gapGrid"></div></div>
+    <div class="sec" id="rmSec"  style="display:none"><div class="sec-title">🗺️ Learning Roadmap</div><div class="rm-list" id="rmList"></div></div>
+    <div class="sec" id="trSec"  style="display:none"><div class="sec-title">🔥 Trending in This Field (2025)</div><div class="tr-list" id="trList"></div></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+/* ==========================================================
+   SKILLTRACKER — AI RECOMMENDATIONS
+   Works for ANY career the user types.
+   API key entered in the UI — saved to localStorage.
+   ========================================================== */
+
+/* ── Firebase ── */
+firebase.initializeApp({
+  apiKey:'AIzaSyBg6Xc-Q0N_LlHJoDnlzxWKa64_WifrwTU',
+  authDomain:'skill-tracker-app-f314c.firebaseapp.com',
+  projectId:'skill-tracker-app-f314c',
+  storageBucket:'skill-tracker-app-f314c.firebasestorage.app',
+  messagingSenderId:'486373051692',
+  appId:'1:486373051692:web:56510c86b8d63ff9cdb089'
+});
+var db=firebase.firestore(), auth=firebase.auth();
+var currentUser=null, userSkills=[], userGoals=[], currentCareer='';
+
+/* ── Load API key from localStorage ── */
+var GROQ_KEY = localStorage.getItem('sk_groq') || '';
+
+/* Show/hide setup card */
+function refreshSetupCard(){
+  var card = document.getElementById('setupCard');
+  var st   = document.getElementById('keyStatus');
+  if(GROQ_KEY && GROQ_KEY.startsWith('gsk_')){
+    card.style.background  = 'rgba(52,211,153,0.06)';
+    card.style.borderColor = 'rgba(52,211,153,0.25)';
+    st.className   = 'key-status key-ok';
+    st.textContent = '✅ Groq AI connected — ready for any career!';
+    st.style.display = 'block';
+    document.getElementById('apiKeyInput').value = GROQ_KEY.substring(0,14)+'••••••••••••••••••••';
+  } else {
+    card.style.background  = '';
+    card.style.borderColor = '';
+    st.style.display = 'none';
+  }
+}
+
+/* Save key button */
+document.getElementById('saveKeyBtn').addEventListener('click', function(){
+  var val = document.getElementById('apiKeyInput').value.trim();
+  var st  = document.getElementById('keyStatus');
+  st.style.display = 'block';
+
+  if(!val || val.indexOf('••') > -1){
+    st.className   = 'key-status key-err';
+    st.textContent = '⚠️ Please paste your actual Groq API key — starts with gsk_';
+    return;
+  }
+  if(!val.startsWith('gsk_')){
+    st.className   = 'key-status key-err';
+    st.textContent = '⚠️ Groq keys start with gsk_  — get yours free at console.groq.com/keys';
+    return;
+  }
+
+  GROQ_KEY = val;
+  localStorage.setItem('sk_groq', val);
+
+  var card = document.getElementById('setupCard');
+  card.style.background  = 'rgba(52,211,153,0.06)';
+  card.style.borderColor = 'rgba(52,211,153,0.25)';
+  st.className   = 'key-status key-ok';
+  st.style.color = '';
+  st.textContent = '✅ Key saved! Now search any career to get AI recommendations.';
+
+  document.getElementById('apiKeyInput').value = val.substring(0,14)+'••••••••••••••••••••';
+  document.getElementById('errBox').style.display = 'none';
+});
+
+/* ── Auth ── */
+auth.onAuthStateChanged(function(u){
+  currentUser=u;
+  if(u){
+    Promise.all([
+      db.collection('users').doc(u.uid).collection('skills').get(),
+      db.collection('users').doc(u.uid).collection('goals').get()
+    ]).then(function(r){
+      userSkills=r[0].docs.map(function(d){return Object.assign({id:d.id},d.data());});
+      userGoals =r[1].docs.map(function(d){return Object.assign({id:d.id},d.data());});
+      showCtx();
+    }).catch(loadLocal);
+  } else loadLocal();
+});
+
+function loadLocal(){
+  try{
+    userSkills=JSON.parse(localStorage.getItem('demoSkills')||'[]');
+    userGoals =JSON.parse(localStorage.getItem('st_goals')||'[]');
+  }catch(e){}
+  showCtx();
+}
+
+function showCtx(){
+  var a=userGoals.filter(function(g){return !g.completed;}).length;
+  if(userSkills.length||a){
+    document.getElementById('sCount').textContent=userSkills.length;
+    document.getElementById('gCount').textContent=a;
+    document.getElementById('ctxRow').style.display='flex';
+  }
+}
+
+/* ── UI events ── */
+document.querySelectorAll('.chip').forEach(function(c){
+  c.addEventListener('click',function(){
+    document.getElementById('careerInput').value=c.getAttribute('data-v');
+    doSearch(c.getAttribute('data-v'));
+  });
+});
+document.getElementById('searchBtn').addEventListener('click',function(){
+  var v=document.getElementById('careerInput').value.trim();
+  if(v) doSearch(v);
+  else {document.getElementById('careerInput').focus();showToast('Please type a career first.');}
+});
+document.getElementById('careerInput').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){var v=this.value.trim();if(v)doSearch(v);}
+});
+document.getElementById('regenBtn').addEventListener('click',function(){
+  if(currentCareer)doSearch(currentCareer);
+});
+
+/* ── Main flow ── */
+function doSearch(career){
+  currentCareer=career;
+  hideErr();
+  setState('loading');
+  document.getElementById('lCareer').textContent='"'+career+'"';
+  animLoader();
+
+  if(!GROQ_KEY || !GROQ_KEY.startsWith('gsk_')){
+    setTimeout(function(){showFallback(career);},1800);
+    return;
+  }
+  callGroqAI(career);
+}
+
+/* ── Loader animation ── */
+function animLoader(){
+  var steps=document.querySelectorAll('.lstep');
+  steps.forEach(function(s){s.className='lstep';});
+  var i=0;
+  var iv=setInterval(function(){
+    if(i>0&&steps[i-1]) steps[i-1].className='lstep done';
+    if(i<steps.length){steps[i].className='lstep active';i++;}
+    else clearInterval(iv);
+  },700);
+}
+
+/* ── Groq API call — free, fast, no credits needed ── */
+function callGroqAI(career){
+  var skillList = userSkills.length
+    ? userSkills.map(function(s){return s.name+' ('+(s.progress||0)+'% proficient)';}).join(', ')
+    : 'No skills yet — treat user as complete beginner';
+
+  var activeGoals = userGoals.filter(function(g){return !g.completed;});
+  var goalList = activeGoals.length
+    ? activeGoals.map(function(g){return '"'+g.title+'" ['+(g.priority||'medium')+' priority]';}).join('; ')
+    : 'No active goals';
+
+  var prompt =
+    'You are an expert career coach AI. A user wants to become a "'+career+'".\n\n'+
+    'USER PROFILE:\n'+
+    'Skills: '+skillList+'\n'+
+    'Goals: '+goalList+'\n\n'+
+    'Return ONLY a single valid JSON object. No markdown, no explanation, no text outside the JSON.\n\n'+
+    '{\n'+
+    '  "careerTitle": "Full career title",\n'+
+    '  "summary": "2-3 sentence personalised assessment for '+career+'",\n'+
+    '  "recommendations": [\n'+
+    '    { "icon":"emoji","name":"Skill","description":"Why it matters for '+career+'","why":"Personalised reason","priority":"high","matchScore":90,"tags":["core"],"category":"technical" }\n'+
+    '  ],\n'+
+    '  "skillGaps": [ { "icon":"emoji","name":"Gap","reason":"Why critical for '+career+'" } ],\n'+
+    '  "roadmap": [ { "phase":"Month 1-2","title":"Phase title","skills":["Skill A","Skill B"] } ],\n'+
+    '  "trending": [ { "name":"Skill","category":"Technical","growth":"+100%","demand":"Very High" } ]\n'+
+    '}\n\n'+
+    'Rules: 6 recommendations specific to "'+career+'". priority = high/medium/low. matchScore = 0-100. '+
+    '3-4 skillGaps. 3-4 roadmap phases. 6 trending skills. Output ONLY the JSON, nothing else.';
+
+  fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + GROQ_KEY
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.7,
+      max_tokens: 1500,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a career coach AI. Always respond with only valid JSON, no markdown, no explanation.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ]
+    })
+  })
+  .then(function(r){
+    return r.json().then(function(data){ return {status:r.status, data:data}; });
+  })
+  .then(function(res){
+    if(res.data.error){
+      var msg = res.data.error.message || JSON.stringify(res.data.error);
+      if(res.status===401){
+        showErr('❌ Invalid Groq key. Click "Clear & re-enter" and paste your key from <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent)">console.groq.com/keys</a>');
+      } else {
+        showErr('Groq API error ('+res.status+'): '+msg);
+      }
+      showFallback(career);
+      return;
+    }
+
+    var raw = res.data.choices[0].message.content || '';
+    raw = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+    var s=raw.indexOf('{'), e=raw.lastIndexOf('}');
+    if(s<0||e<0){ showErr('Parse error — no JSON in response.'); showFallback(career); return; }
+    raw = raw.substring(s, e+1);
+
+    try{
+      renderAll(JSON.parse(raw));
+    } catch(pe){
+      showErr('JSON error: '+pe.message);
+      showFallback(career);
+    }
+  })
+  .catch(function(err){
+    var msg = err.message||String(err);
+    if(msg.indexOf('Failed to fetch')>-1){
+      showErr('❌ CORS Error — Open this file via <strong>VS Code Live Server</strong> (right-click → Open with Live Server). Showing built-in recommendations for now.');
+    } else {
+      showErr('Error: '+msg);
+    }
+    showFallback(career);
+  });
+}
+
+/* ── Render all sections ── */
+function renderAll(d){
+  var existNames=userSkills.map(function(s){return (s.name||'').toLowerCase();});
+
+  document.getElementById('rhTitle').innerHTML='Recommendations for <span>'+esc(d.careerTitle||currentCareer)+'</span>';
+  document.getElementById('rhSub').textContent=d.summary||'';
+
+  /* Skill cards */
+  var recs=d.recommendations||[];
+  document.getElementById('recGrid').innerHTML=recs.map(function(r,i){
+    var added=existNames.indexOf((r.name||'').toLowerCase())>-1;
+    var pc=r.priority==='high'?'p-h':r.priority==='low'?'p-l':'p-m';
+    var pl=r.priority==='high'?'🔴 High':r.priority==='low'?'🟢 Low':'🟡 Medium';
+    var ms=parseInt(r.matchScore||r.match||75);
+    var tags=(r.tags||[]).map(function(t){
+      var cls=t==='hot'?'t-hot':t==='trending'?'t-tr':t==='new'?'t-new':'t-core';
+      var lbl=t==='hot'?'🔥 hot':t==='trending'?'📈 trending':t==='new'?'✨ new':'⭐ core';
+      return '<span class="ctag '+cls+'">'+lbl+'</span>';
+    }).join('');
+    return '<div class="rec-card" style="animation-delay:'+(i*0.07)+'s">'
+      +'<div class="card-top"><div class="c-icon">'+(r.icon||'📌')+'</div><span class="pri '+pc+'">'+pl+'</span></div>'
+      +'<div class="c-name">'+esc(r.name||'')+'</div>'
+      +'<div class="c-desc">'+esc(r.description||'')+'</div>'
+      +(r.why?'<div class="why-box"><div class="why-lbl">💡 Why for you</div><div class="why-txt">'+esc(r.why)+'</div></div>':'')
+      +'<div class="match-row"><span class="m-lbl">Match</span><div class="m-track"><div class="m-fill" style="width:'+ms+'%"></div></div><span class="m-val">'+ms+'%</span></div>'
+      +'<div class="c-tags">'+tags+'</div>'
+      +'<button class="add-btn'+(added?' added':'')+'" data-n="'+esc(r.name)+'" data-c="'+(r.category||'technical')+'">'+(added?'✅ Already Added':'+ Add to My Skills')+'</button>'
+      +'</div>';
+  }).join('');
+  document.querySelectorAll('.add-btn:not(.added)').forEach(function(b){
+    b.addEventListener('click',function(){addSkill(b.getAttribute('data-n'),b.getAttribute('data-c'),b);});
+  });
+
+  /* Gaps */
+  var gaps=d.skillGaps||d.gaps||[];
+  if(gaps.length){
+    document.getElementById('gapGrid').innerHTML=gaps.map(function(g,i){
+      return '<div class="gap-card" style="animation-delay:'+(i*0.07)+'s">'
+        +'<div class="gap-icon">'+(g.icon||'⚠️')+'</div>'
+        +'<div class="gap-name">'+esc(g.name||'')+'</div>'
+        +'<div class="gap-why">'+esc(g.reason||g.r||'')+'</div></div>';
+    }).join('');
+    document.getElementById('gapSec').style.display='block';
+  } else document.getElementById('gapSec').style.display='none';
+
+  /* Roadmap */
+  var rm=d.roadmap||[];
+  if(rm.length){
+    document.getElementById('rmList').innerHTML=rm.map(function(s,i){
+      var skills=(s.skills||s.s||[]).map(function(k){return '<span class="rm-tag">'+esc(k)+'</span>';}).join('');
+      return '<div class="rm-item">'
+        +'<div class="rm-num">'+(i+1)+'</div>'
+        +'<div class="rm-body"><div class="rm-phase">'+esc(s.phase||s.p||'')+'</div><div class="rm-title">'+esc(s.title||s.t||'')+'</div><div class="rm-tags">'+skills+'</div></div>'
+        +'</div>';
+    }).join('');
+    document.getElementById('rmSec').style.display='block';
+  } else document.getElementById('rmSec').style.display='none';
+
+  /* Trending */
+  var tr=d.trending||[];
+  if(tr.length){
+    document.getElementById('trList').innerHTML=tr.map(function(t,i){
+      return '<div class="tr-card" style="animation-delay:'+(i*0.05)+'s">'
+        +'<div class="tr-rank'+(i<3?' top':'')+'">&#35;'+(i+1)+'</div>'
+        +'<div class="tr-info"><div class="tr-name">'+esc(t.name||'')+'</div><div class="tr-meta">'+esc(t.category||t.c||'')+' · Demand: '+esc(t.demand||t.d||'')+'</div></div>'
+        +'<div class="tr-growth">↑ '+esc(t.growth||t.g||'')+'</div>'
+        +'</div>';
+    }).join('');
+    document.getElementById('trSec').style.display='block';
+  } else document.getElementById('trSec').style.display='none';
+
+  setState('results');
+}
+
+/* ── Add skill ── */
+function addSkill(name,cat,btn){
+  var skills=[];
+  try{skills=JSON.parse(localStorage.getItem('demoSkills')||'[]');}catch(e){}
+  if(skills.find(function(s){return (s.name||'').toLowerCase()===name.toLowerCase();})){
+    btn.textContent='✅ Already Added';btn.classList.add('added');return;
+  }
+  skills.push({id:'r'+Date.now(),name:name,category:cat||'technical',description:'',progress:0});
+  localStorage.setItem('demoSkills',JSON.stringify(skills));
+  btn.textContent='✅ Added';btn.classList.add('added');
+  showToast('✅ '+name+' added to your skills!');
+  if(currentUser) db.collection('users').doc(currentUser.uid).collection('skills')
+    .add({name:name,category:cat||'technical',description:'',progress:0,createdAt:Date.now()})
+    .catch(function(){});
+}
+
+/* ── Built-in smart fallback (50+ careers via keyword matching) ── */
+function showFallback(career){
+  var q=career.toLowerCase();
+
+  var DB={
+    'chartered accountant|accountant|ca |cpa|cfa|audit|taxation|finance|icai':{
+      t:'Chartered Accountant',s:'A CA career demands deep financial, tax, and audit expertise. Here is a personalised roadmap to get you started.',
+      r:[{i:'📊',n:'Financial Accounting',d:'Preparation of P&L, Balance Sheet, Cash Flow as per Ind AS/IFRS.',w:'The foundation of all CA work.',p:'high',m:98,t:['core']},{i:'⚖️',n:'Taxation — GST & Income Tax',d:'GST filing, TDS, ITR, and Indian tax compliance.',w:'Day-to-day work of every CA practice.',p:'high',m:96,t:['core','hot']},{i:'🔍',n:'Auditing & Assurance',d:'Statutory audit, internal audit, ICAI Standards on Auditing.',w:'Mandatory CA competency and major revenue source.',p:'high',m:94,t:['core']},{i:'📈',n:'Advanced Excel & Financial Modelling',d:'Pivot tables, DCF, MIS reports.',w:'Expected from day one.',p:'high',m:92,t:['core','trending']},{i:'🏢',n:'Tally Prime / SAP FICO',d:'Industry-standard accounting software.',w:'Clients expect this from day one.',p:'medium',m:88,t:['core','hot']},{i:'🏛️',n:'Corporate Law & Compliance',d:'Companies Act, ROC filings, MCA compliance.',w:'CAs advise on company governance regularly.',p:'medium',m:84,t:['core']}],
+      g:[{i:'🤖',n:'AI in Accounting',r:'Automation tools are replacing manual work.'},{i:'☁️',n:'Cloud Accounting',r:'Zoho/QuickBooks are now standard.'},{i:'📋',n:'Financial Modelling & Valuation',r:'Critical for advisory roles.'}],
+      rm:[{p:'Year 1',t:'CA Foundation',s:['Accounting','Business Law','Maths','Economics']},{p:'Year 2-3',t:'Intermediate + Articleship',s:['GST','Income Tax','Auditing','Tally','Excel']},{p:'Year 4',t:'CA Final',s:['SFM','Corporate Law','SAP FICO','Modelling']},{p:'Post-Qual',t:'Modern Toolkit',s:['Data Analytics','AI Tools','Cloud Accounting','Int\'l Tax']}],
+      tr:[{n:'AI Accounting',c:'Technical',g:'+280%',d:'Extremely High'},{n:'GST Litigation',c:'Technical',g:'+165%',d:'Very High'},{n:'International Tax',c:'Technical',g:'+140%',d:'Very High'},{n:'ESG Reporting',c:'Technical',g:'+200%',d:'Very High'},{n:'Financial Forensics',c:'Technical',g:'+120%',d:'High'},{n:'Startup CFO Advisory',c:'Soft Skill',g:'+175%',d:'Extremely High'}]
+    },
+    'doctor|mbbs|physician|medical|surgeon|nurse|nursing|dentist|pharmacy':{
+      t:'Healthcare Professional',s:'Healthcare careers need rigorous academic knowledge and strong clinical skills. Your roadmap covers exams and practical competencies.',
+      r:[{i:'🧬',n:'Anatomy & Physiology',d:'Human body systems — mandatory for all healthcare roles.',w:'Foundation of every medical exam and clinical decision.',p:'high',m:98,t:['core']},{i:'⚗️',n:'Biochemistry & Pathology',d:'Cellular processes, disease mechanisms, lab tests.',w:'Connects basic sciences to clinical practice.',p:'high',m:95,t:['core']},{i:'💊',n:'Pharmacology',d:'Drug mechanisms, dosages, interactions.',w:'Prescribing requires deep pharmacology knowledge daily.',p:'high',m:93,t:['core']},{i:'🩺',n:'Clinical Examination Skills',d:'History taking, physical examination, patient communication.',w:'Assessed in every practical exam and rotation.',p:'high',m:91,t:['core']},{i:'🔬',n:'Microbiology & Immunology',d:'Infection diagnosis, vaccines, immune responses.',w:'Essential for understanding and treating infectious diseases.',p:'high',m:88,t:['core']},{i:'💻',n:'Evidence-Based Medicine',d:'Reading clinical research and applying guidelines.',w:'Modern medicine requires critically evaluating research.',p:'medium',m:80,t:['trending']}],
+      g:[{i:'🤖',n:'Digital Health & AI Diagnostics',r:'AI tools are transforming healthcare rapidly.'},{i:'😌',n:'Patient Communication',r:'Core clinical competency and exam criterion.'},{i:'📋',n:'Medical Ethics & Law',r:'Informed consent and medico-legal cases are essential.'}],
+      rm:[{p:'Pre-NEET',t:'Foundation',s:['Physics','Chemistry','Biology','NEET Mock Tests']},{p:'MBBS Year 1-2',t:'Pre-clinical',s:['Anatomy','Physiology','Biochemistry','Pathology']},{p:'MBBS Year 3-4',t:'Clinical',s:['Pharmacology','Medicine','Surgery','Gynaecology']},{p:'Internship+',t:'Practice',s:['Clinical Rotations','PG Prep','Research','Digital Health']}],
+      tr:[{n:'AI Diagnostics',c:'Technical',g:'+340%',d:'Extremely High'},{n:'Telemedicine',c:'Technical',g:'+220%',d:'Very High'},{n:'Genomics',c:'Technical',g:'+190%',d:'Very High'},{n:'Mental Health',c:'Technical',g:'+160%',d:'Very High'},{n:'Minimally Invasive Surgery',c:'Technical',g:'+140%',d:'High'},{n:'Healthcare Data Analytics',c:'Technical',g:'+130%',d:'High'}]
+    },
+    'lawyer|law|legal|advocate|llb|solicitor|attorney':{
+      t:'Legal Professional / Lawyer',s:'Law careers demand expertise in case analysis, statutory interpretation, and client counselling. Your roadmap covers the journey from LLB to practice.',
+      r:[{i:'⚖️',n:'Constitutional & Administrative Law',d:'Fundamental rights and government powers.',w:'Foundation of Indian legal practice.',p:'high',m:97,t:['core']},{i:'📜',n:'Contract Law & Civil Procedure',d:'Formation, breach, remedies, and CPC courtroom procedures.',w:'Most commercial disputes involve contract law.',p:'high',m:95,t:['core']},{i:'🔍',n:'Legal Research (Manupatra/SCC Online)',d:'Finding and analysing case law and statutes.',w:'Research is the backbone of every legal submission.',p:'high',m:92,t:['core','hot']},{i:'🗣️',n:'Courtroom Advocacy',d:'Drafting pleadings and presenting arguments.',w:'Advocacy skill directly determines litigation success.',p:'high',m:90,t:['core']},{i:'📋',n:'Corporate Law & Drafting',d:'Company law, contracts, shareholder agreements.',w:'Corporate practice is the highest-paid area of law.',p:'high',m:88,t:['hot','trending']},{i:'💼',n:'Client Counselling',d:'Explaining legal positions and negotiating on behalf of clients.',w:'Client retention depends on communication skills.',p:'medium',m:85,t:['core']}],
+      g:[{i:'💻',n:'Legal Tech & AI Tools',r:'Contract AI and e-discovery are now expected.'},{i:'🌍',n:'International Law',r:'Cross-border disputes require this expertise.'},{i:'📊',n:'Forensic Accounting Basics',r:'White-collar crime cases need financial literacy.'}],
+      rm:[{p:'Year 1-2',t:'LLB Foundation',s:['Constitutional Law','Contract Law','Torts','Legal Research']},{p:'Year 3',t:'Core Subjects',s:['Criminal Law','Evidence','Company Law','CPC']},{p:'Year 4-5',t:'Specialisation',s:['Corporate Law','IPR','Arbitration','Internships']},{p:'Post-LLB',t:'Practice',s:['Bar Enrolment','Mooting','Legal Tech','Networking']}],
+      tr:[{n:'AI Legal Research',c:'Technical',g:'+260%',d:'Extremely High'},{n:'Data Privacy Law (DPDP)',c:'Technical',g:'+220%',d:'Very High'},{n:'Arbitration & ADR',c:'Technical',g:'+170%',d:'Very High'},{n:'Startup & VC Legal',c:'Technical',g:'+190%',d:'Very High'},{n:'Cyber Law & IT Act',c:'Technical',g:'+180%',d:'High'},{n:'ESG Compliance',c:'Technical',g:'+140%',d:'High'}]
+    },
+    'software|developer|programmer|full stack|web dev|frontend|backend|react|node|python|java|javascript':{
+      t:'Software Developer',s:'Software development is one of the most in-demand careers globally. Your roadmap takes you from programming basics to full-stack development and modern tooling.',
+      r:[{i:'💻',n:'Programming Fundamentals',d:'Variables, loops, functions, OOP — start with Python or JavaScript.',w:'Every software career starts here.',p:'high',m:98,t:['core']},{i:'⚛️',n:'React.js',d:'Most popular UI library — essential for modern front-end development.',w:'Powers Facebook, Instagram, Airbnb — employers expect it.',p:'high',m:95,t:['core','hot']},{i:'🟢',n:'Node.js & REST APIs',d:'Server-side JavaScript for building back-end services.',w:'Knowing both front-end and back-end earns more.',p:'high',m:92,t:['core','hot']},{i:'🗄️',n:'SQL & Databases',d:'PostgreSQL for relational data, MongoDB for document-based apps.',w:'Every application needs a database.',p:'high',m:90,t:['core']},{i:'🔷',n:'TypeScript',d:'Typed JavaScript for building large, maintainable codebases.',w:'Required in most software developer job postings.',p:'medium',m:88,t:['hot','trending']},{i:'🐳',n:'Git & Docker',d:'Version control and containerisation for professional development.',w:'No developer is hired without knowing Git.',p:'medium',m:85,t:['core']}],
+      g:[{i:'🔐',n:'Security Best Practices',r:'OWASP top 10 and secure coding are essential.'},{i:'🧪',n:'Testing',r:'Employers expect Jest or pytest testing skills.'},{i:'☁️',n:'Cloud Deployment',r:'Developers who deploy their own apps are more valuable.'}],
+      rm:[{p:'Month 1-2',t:'Foundations',s:['Python/JavaScript','Git','HTML/CSS','Problem Solving']},{p:'Month 3-4',t:'Front-end',s:['React.js','TypeScript','REST APIs','Responsive Design']},{p:'Month 5-6',t:'Back-end',s:['Node.js','Databases','Authentication','Testing']},{p:'Month 7+',t:'Full Stack & Deploy',s:['Docker','CI/CD','AWS/Vercel','Portfolio']}],
+      tr:[{n:'AI/LLM Integration',c:'Technical',g:'+350%',d:'Extremely High'},{n:'Next.js',c:'Technical',g:'+180%',d:'Very High'},{n:'TypeScript',c:'Technical',g:'+95%',d:'Very High'},{n:'Edge Computing',c:'Technical',g:'+130%',d:'High'},{n:'Web3',c:'Technical',g:'+140%',d:'High'},{n:'Accessibility (a11y)',c:'Technical',g:'+80%',d:'High'}]
+    },
+    'data scientist|data analyst|data engineer|machine learning|analytics':{
+      t:'Data Scientist / Analyst',s:'Data careers combine statistics, programming, and business insight. Demand is at an all-time high in 2025.',
+      r:[{i:'🐍',n:'Python for Data Science',d:'NumPy, Pandas, Matplotlib — the core stack.',w:'Python is used in 95% of data science roles.',p:'high',m:98,t:['core']},{i:'📊',n:'SQL & Data Wrangling',d:'Query databases and clean real-world data.',w:'Data scientists spend 60-80% of time here.',p:'high',m:94,t:['core','hot']},{i:'🧠',n:'Machine Learning',d:'Regression, classification, clustering with scikit-learn.',w:'Core skill that separates DS from analysts.',p:'high',m:92,t:['hot','trending']},{i:'📈',n:'Data Visualisation',d:'Tableau, Power BI, or Matplotlib for communicating insights.',w:'Storytelling with data gets budgets approved.',p:'medium',m:86,t:['trending']},{i:'🧮',n:'Statistics & Probability',d:'Hypothesis testing, distributions, Bayesian thinking.',w:'Statistical thinking underpins every model.',p:'high',m:90,t:['core']},{i:'🤖',n:'Deep Learning (PyTorch)',d:'Neural networks and transformers for complex AI.',w:'Required for NLP and computer vision roles.',p:'medium',m:84,t:['hot','new']}],
+      g:[{i:'☁️',n:'Cloud ML Platforms',r:'All production ML runs on AWS SageMaker or GCP.'},{i:'📦',n:'MLOps',r:'Deploying and monitoring models is half the job.'},{i:'💬',n:'Business Communication',r:'Top hiring factor — translating data to decisions.'}],
+      rm:[{p:'Month 1-2',t:'Python & Stats',s:['Python','NumPy','Pandas','Statistics']},{p:'Month 3-4',t:'Analysis',s:['SQL','Matplotlib','Power BI','EDA']},{p:'Month 5-6',t:'ML',s:['scikit-learn','Feature Engineering','Kaggle']},{p:'Month 7+',t:'Advanced',s:['Deep Learning','TensorFlow','MLOps','Cloud ML']}],
+      tr:[{n:'LLMs & GenAI',c:'Technical',g:'+380%',d:'Extremely High'},{n:'MLOps',c:'Technical',g:'+180%',d:'Very High'},{n:'Vector Databases',c:'Technical',g:'+250%',d:'Very High'},{n:'AutoML',c:'Technical',g:'+140%',d:'High'},{n:'Prompt Engineering',c:'Technical',g:'+300%',d:'Extremely High'},{n:'Data Storytelling',c:'Soft Skill',g:'+120%',d:'High'}]
+    },
+    'chef|cook|culinary|baker|pastry|restaurant|kitchen|cuisine':{
+      t:'Chef / Culinary Professional',s:'Culinary careers blend technical cooking skills with creativity and business acumen. Your roadmap takes you from fundamentals to running your own kitchen.',
+      r:[{i:'🔪',n:'Knife Skills & Mise en Place',d:'Precision cutting and preparation fundamentals.',w:'First thing every professional chef is judged on.',p:'high',m:98,t:['core']},{i:'🍳',n:'French Culinary Techniques',d:'Sautéing, braising, stocks, and mother sauces.',w:'Foundation taught in every culinary school.',p:'high',m:96,t:['core']},{i:'🌍',n:'Global Cuisines & Flavour Profiles',d:'Spices, regional ingredients, cultural food traditions.',w:'Modern restaurants demand diverse cuisine knowledge.',p:'high',m:90,t:['trending']},{i:'📋',n:'Food Safety & FSSAI',d:'HACCP, hygiene regulations, inventory management.',w:'Every professional kitchen operates under strict standards.',p:'high',m:92,t:['core']},{i:'🎂',n:'Baking & Pastry Arts',d:'Bread, pastry, and desserts.',w:'Opens opportunities in hotels, bakeries, fine dining.',p:'medium',m:82,t:['trending']},{i:'📊',n:'Menu Planning & Food Costing',d:'Designing profitable menus and managing food cost %.',w:'Chefs who understand food cost become head chefs.',p:'medium',m:84,t:['core']}],
+      g:[{i:'📱',n:'Food Photography & Social Media',r:'Viral food content drives restaurant discovery in 2025.'},{i:'💰',n:'Restaurant Business Finance',r:'Running your own restaurant requires basic P&L skills.'},{i:'🌱',n:'Plant-based Cooking',r:'Vegan menus are now mandatory in most restaurants.'}],
+      rm:[{p:'Month 1-3',t:'Culinary Foundations',s:['Knife Skills','Basic Techniques','Kitchen Safety','FSSAI']},{p:'Month 4-6',t:'Core Skills',s:['French Techniques','Stocks & Sauces','Baking Basics','Menu Design']},{p:'Month 7-12',t:'Specialisation',s:['Global Cuisines','Pastry','Restaurant Kitchen','Food Costing']},{p:'Year 2+',t:'Career Growth',s:['Head Chef','Food Business','Catering','Social Media']}],
+      tr:[{n:'Plant-based Cuisine',c:'Technical',g:'+220%',d:'Very High'},{n:'Cloud Kitchen',c:'Technical',g:'+280%',d:'Extremely High'},{n:'Food Content Creation',c:'Technical',g:'+300%',d:'Extremely High'},{n:'Health & Wellness Cooking',c:'Technical',g:'+180%',d:'Very High'},{n:'Fermentation & Artisan Foods',c:'Technical',g:'+140%',d:'High'},{n:'Food Delivery Optimisation',c:'Technical',g:'+160%',d:'High'}]
+    },
+    'civil engineer|structural|construction|architect|architecture|mechanical engineer|electrical engineer|engineer':{
+      t:'Engineering Professional',s:'Engineering careers combine strong mathematics, physics, and technical problem-solving with practical project management skills.',
+      r:[{i:'📐',n:'Engineering Mathematics',d:'Calculus, linear algebra, differential equations.',w:'Mathematical foundation of all engineering disciplines.',p:'high',m:97,t:['core']},{i:'💻',n:'CAD Software (AutoCAD/SolidWorks)',d:'Design and drafting tools used across all engineering fields.',w:'CAD proficiency is expected from day one in most firms.',p:'high',m:95,t:['core','hot']},{i:'🏗️',n:'Project Management (PMP)',d:'Planning, scheduling, budgeting, and stakeholder management.',w:'Engineers who manage projects advance faster.',p:'high',m:90,t:['trending']},{i:'📊',n:'Structural / Systems Analysis',d:'Load calculations, system design, simulation tools.',w:'Core technical competency for professional engineers.',p:'high',m:93,t:['core']},{i:'📋',n:'Indian Standards & Building Codes',d:'IS codes, safety regulations, compliance requirements.',w:'All professional engineering work follows these standards.',p:'high',m:88,t:['core']},{i:'🌱',n:'Sustainable Design & Green Building',d:'LEED certification, energy-efficient design principles.',w:'Green building is now a major hiring differentiator.',p:'medium',m:82,t:['trending','new']}],
+      g:[{i:'🤖',n:'AI & Simulation Tools',r:'AI-assisted design and simulation are becoming standard.'},{i:'☁️',n:'BIM (Building Information Modelling)',r:'BIM is now mandatory on most large construction projects.'},{i:'📈',n:'Data Analysis & Sensors (IoT)',r:'Smart infrastructure requires data literacy from engineers.'}],
+      rm:[{p:'Year 1-2',t:'Engineering Foundation',s:['Mathematics','Physics','Engineering Drawing','Basic Sciences']},{p:'Year 3',t:'Core Technical Skills',s:['CAD Software','Structural Analysis','Materials Science','Lab Work']},{p:'Year 4',t:'Specialisation',s:['Design Projects','IS Codes','Industry Software','Internship']},{p:'Post-Graduation',t:'Professional Growth',s:['PMP / PE License','BIM','AI Tools','Entrepreneurship']}],
+      tr:[{n:'BIM & Digital Twins',c:'Technical',g:'+240%',d:'Extremely High'},{n:'AI in Structural Design',c:'Technical',g:'+200%',d:'Very High'},{n:'Green & Net-Zero Buildings',c:'Technical',g:'+190%',d:'Very High'},{n:'Prefab & Modular Construction',c:'Technical',g:'+160%',d:'High'},{n:'Drone Surveying',c:'Technical',g:'+180%',d:'High'},{n:'Smart Infrastructure (IoT)',c:'Technical',g:'+150%',d:'High'}]
+    },
+    'designer|ui|ux|graphic|product design|visual design|figma':{
+      t:'Design Professional',s:'Design careers combine creativity with systematic problem-solving. Your roadmap covers visual fundamentals through to advanced UX research and design systems.',
+      r:[{i:'✏️',n:'Figma',d:'Industry standard for UI design, prototyping, design systems.',w:'Used by 90% of product teams — non-negotiable.',p:'high',m:97,t:['core','hot']},{i:'🎨',n:'Visual Design Principles',d:'Grid systems, typography, colour theory, visual hierarchy.',w:'Strong fundamentals make every design work more effectively.',p:'high',m:95,t:['core']},{i:'🔄',n:'UX Research Methods',d:'User interviews, usability testing, affinity mapping.',w:'Design without research is guessing.',p:'high',m:90,t:['core']},{i:'📱',n:'Responsive & Mobile Design',d:'Adaptive layouts for phones, tablets, desktops.',w:'60%+ of web traffic is mobile.',p:'high',m:92,t:['core']},{i:'🎨',n:'Design Systems',d:'Consistent, scalable component libraries.',w:'Expected in mid-to-senior design roles.',p:'medium',m:85,t:['trending']},{i:'✨',n:'Motion Design & Micro-interactions',d:'Animations that elevate the user experience.',w:'Motion differentiates average from exceptional products.',p:'medium',m:78,t:['new','trending']}],
+      g:[{i:'💻',n:'Basic HTML & CSS',r:'Designers who code communicate better with developers.'},{i:'📊',n:'Analytics & Heatmaps',r:'Using GA4 and Hotjar to validate designs with data.'},{i:'🧪',n:'A/B Testing',r:'Product teams expect designers to prove impact.'}],
+      rm:[{p:'Month 1-2',t:'Design Foundations',s:['Figma','Colour Theory','Typography','Grid Systems']},{p:'Month 3-4',t:'UX Process',s:['User Research','Wireframing','Prototyping','Usability Testing']},{p:'Month 5-6',t:'Advanced Design',s:['Design Systems','Motion Design','Accessibility','Responsive Design']},{p:'Month 7+',t:'Portfolio & Growth',s:['Case Studies','HTML/CSS','Analytics','Stakeholder Presentations']}],
+      tr:[{n:'AI Design Tools',c:'Technical',g:'+310%',d:'Extremely High'},{n:'3D & Spatial UI',c:'Technical',g:'+240%',d:'Very High'},{n:'No-code Prototyping',c:'Technical',g:'+150%',d:'Very High'},{n:'Voice UI',c:'Technical',g:'+110%',d:'High'},{n:'Design Tokens',c:'Technical',g:'+130%',d:'High'},{n:'Ethical Design',c:'Soft Skill',g:'+95%',d:'High'}]
+    },
+    'market|seo|social media|content|digital market|advertising|ppc|copywriting|growth hacker':{
+      t:'Digital Marketing Professional',s:'Digital marketing blends creative thinking with data analysis to drive business growth. Your roadmap covers SEO, paid ads, content, and analytics.',
+      r:[{i:'🔍',n:'SEO',d:'On-page SEO, keyword research, technical SEO.',w:'Organic search is the highest ROI marketing channel.',p:'high',m:95,t:['core']},{i:'📣',n:'Google Ads & Meta Ads',d:'Running and optimising paid campaigns.',w:'PPC drives immediate results.',p:'high',m:92,t:['core','hot']},{i:'📊',n:'Google Analytics 4',d:'Tracking performance, funnels, and conversion.',w:'Marketing without data is guessing.',p:'high',m:90,t:['core','trending']},{i:'✍️',n:'Content Marketing & Copywriting',d:'Blogs, emails, social posts that convert.',w:'Content is the fuel of all digital marketing.',p:'high',m:88,t:['core']},{i:'📱',n:'Social Media Marketing',d:'Building audiences on Instagram, LinkedIn, YouTube.',w:'Primary brand awareness and acquisition channel.',p:'medium',m:85,t:['trending']},{i:'📧',n:'Email Marketing',d:'Automated sequences, segmentation, A/B testing.',w:'Email has the highest ROI of any digital channel.',p:'medium',m:82,t:['core']}],
+      g:[{i:'🤖',n:'AI Marketing Tools',r:'ChatGPT for content and AI analytics are now essential.'},{i:'💻',n:'Basic HTML/CSS',r:'Marketers who edit landing pages ship faster.'},{i:'🎥',n:'Video Marketing',r:'Video gets 12x more engagement than text.'}],
+      rm:[{p:'Month 1-2',t:'Foundations',s:['SEO Basics','Google Analytics','Content Writing','Social Media']},{p:'Month 3-4',t:'Paid Channels',s:['Google Ads','Meta Ads','Email Marketing','Landing Pages']},{p:'Month 5-6',t:'Advanced Growth',s:['CRO','Marketing Automation','Video Marketing']},{p:'Month 7+',t:'Data-Driven',s:['Advanced Analytics','AI Tools','Brand Strategy']}],
+      tr:[{n:'AI Content Generation',c:'Technical',g:'+290%',d:'Extremely High'},{n:'Short-form Video',c:'Technical',g:'+250%',d:'Very High'},{n:'WhatsApp Marketing',c:'Technical',g:'+200%',d:'Very High'},{n:'Performance Marketing',c:'Technical',g:'+160%',d:'Very High'},{n:'Influencer Marketing',c:'Soft Skill',g:'+140%',d:'High'},{n:'Personalisation at Scale',c:'Technical',g:'+130%',d:'High'}]
+    },
+    'game developer|game dev|game design|unity|unreal':{
+      t:'Game Developer',s:'Game development combines programming, art, and design. The industry spans mobile, PC, console, and the emerging VR/AR space.',
+      r:[{i:'🎮',n:'Unity (C#)',d:'Most popular engine — powers 50% of all mobile games.',w:'#1 engine for indie and mid-size studios.',p:'high',m:96,t:['core','hot']},{i:'💻',n:'C++ Programming',d:'Low-level language used in Unreal Engine.',w:'Required in AAA game studio roles.',p:'high',m:90,t:['core']},{i:'🗺️',n:'Game Design Fundamentals',d:'Game loops, level design, player psychology.',w:'Tech without design thinking produces games nobody plays.',p:'high',m:92,t:['core']},{i:'🎨',n:'3D Modelling (Blender)',d:'Creating game-ready 3D assets and characters.',w:'Lets indie devs create complete games solo.',p:'medium',m:80,t:['trending']},{i:'🔊',n:'Game Audio & Sound Design',d:'SFX and music with FMOD or Wwise.',w:'Audio creates 50% of a game\'s emotional impact.',p:'medium',m:76,t:['new']},{i:'📱',n:'Mobile Game Optimisation',d:'Performance, battery, and monetisation for iOS/Android.',w:'Mobile gaming generates 60% of all game revenue.',p:'medium',m:84,t:['trending']}],
+      g:[{i:'🧠',n:'Shader Programming',r:'Visual effects require shader knowledge in professional roles.'},{i:'🤝',n:'Version Control (Git)',r:'All professional studios use version control.'},{i:'📦',n:'Game Publishing & Monetisation',r:'Understanding app stores and pricing is crucial.'}],
+      rm:[{p:'Month 1-2',t:'Foundations',s:['C# Basics','Unity Interface','2D Mechanics','Git']},{p:'Month 3-4',t:'Core Systems',s:['Physics','Animation','Game UI','3D Basics']},{p:'Month 5-6',t:'Advanced',s:['Shaders','Blender','Multiplayer','Audio']},{p:'Month 7+',t:'Ship & Grow',s:['Mobile Optimisation','Publishing','Portfolio','Unreal Engine']}],
+      tr:[{n:'AI in Games (Procedural Gen)',c:'Technical',g:'+280%',d:'Extremely High'},{n:'VR/AR Game Development',c:'Technical',g:'+220%',d:'Very High'},{n:'Unreal Engine 5',c:'Technical',g:'+190%',d:'Very High'},{n:'Web3 & Blockchain Games',c:'Technical',g:'+140%',d:'High'},{n:'Cloud Gaming',c:'Technical',g:'+130%',d:'High'},{n:'Game Accessibility',c:'Soft Skill',g:'+100%',d:'High'}]
+    },
+    'youtuber|content creator|streamer|vlogger|influencer|podcaster':{
+      t:'Content Creator / YouTuber',s:'Content creation is now a legitimate full-time career. Success requires a mix of creativity, technical production skills, and business acumen.',
+      r:[{i:'🎬',n:'Video Editing (Premiere/CapCut)',d:'Professional video editing for YouTube, Reels, and TikTok.',w:'Editing quality is what retains viewers and grows channels.',p:'high',m:97,t:['core','hot']},{i:'📝',n:'Content Strategy & Scripting',d:'Planning video ideas, scripting, and building a content calendar.',w:'Consistent, strategic content is what grows channels.',p:'high',m:94,t:['core']},{i:'🔍',n:'YouTube SEO & Algorithm',d:'Titles, thumbnails, tags, and understanding the recommendation algorithm.',w:'SEO is how new viewers discover your channel.',p:'high',m:92,t:['core','hot']},{i:'🎙️',n:'Audio Production',d:'Microphone setup, audio editing, noise reduction.',w:'Bad audio kills channels — viewers leave instantly.',p:'high',m:90,t:['core']},{i:'📊',n:'Analytics & Audience Growth',d:'YouTube Studio analytics, retention curves, A/B testing thumbnails.',w:'Data-driven creators grow 5x faster than instinct-only creators.',p:'medium',m:86,t:['trending']},{i:'💰',n:'Monetisation & Brand Deals',d:'AdSense, sponsorships, merchandise, digital products.',w:'Multiple income streams are essential for sustainable creator careers.',p:'medium',m:82,t:['trending']}],
+      g:[{i:'📸',n:'Thumbnail & Graphic Design',r:'Thumbnails drive 70% of click decisions on YouTube.'},{i:'🤝',n:'Brand Partnerships & Negotiation',r:'Sponsorships become the main income source at 10K+ subscribers.'},{i:'🌐',n:'Cross-platform Distribution',r:'Repurposing content across Instagram, TikTok, and X multiplies reach.'}],
+      rm:[{p:'Month 1-2',t:'Production Foundations',s:['Camera & Lighting Basics','Video Editing','Audio Setup','First 10 Videos']},{p:'Month 3-4',t:'Growth Strategy',s:['YouTube SEO','Thumbnail Design','Content Calendar','Community Building']},{p:'Month 5-6',t:'Monetisation',s:['AdSense Eligibility','Brand Pitch Deck','Merchandise','Digital Products']},{p:'Month 7+',t:'Scale & Diversify',s:['Multi-platform Strategy','Team Building','Podcast','Online Course']}],
+      tr:[{n:'AI Video Generation',c:'Technical',g:'+400%',d:'Extremely High'},{n:'Shorts & Reels Strategy',c:'Technical',g:'+300%',d:'Extremely High'},{n:'Podcast → YouTube Strategy',c:'Technical',g:'+180%',d:'Very High'},{n:'Community Building (Discord)',c:'Soft Skill',g:'+160%',d:'High'},{n:'Live Streaming & Super Chats',c:'Technical',g:'+140%',d:'High'},{n:'AI Thumbnail Tools',c:'Technical',g:'+220%',d:'Very High'}]
+    }
+  };
+
+  /* Keyword matching */
+  var best=null, bestScore=0;
+  for(var key in DB){
+    var kws=key.split('|'), score=0;
+    for(var i=0;i<kws.length;i++){
+      var kw=kws[i].trim();
+      if(!kw) continue;
+      if(q===kw) score=200;
+      else if(q.indexOf(kw)>-1||kw.indexOf(q)>-1) score=Math.max(score,100+kw.length);
+      else {
+        var qw=q.split(/\s+/),kw2=kw.split(/\s+/);
+        for(var a=0;a<qw.length;a++) for(var b=0;b<kw2.length;b++)
+          if(qw[a].length>2&&qw[a]===kw2[b]) score=Math.max(score,50);
+      }
+    }
+    if(score>bestScore){bestScore=score;best=DB[key];}
+  }
+
+  var existNames=userSkills.map(function(s){return (s.name||'').toLowerCase();});
+  var mastered=userSkills.filter(function(s){return (s.progress||0)>=80;}).map(function(s){return (s.name||'').toLowerCase();});
+
+  if(best&&bestScore>=40){
+    var recs=best.r.filter(function(r){return mastered.indexOf(r.n.toLowerCase())<0;}).slice(0,6);
+    var sum=best.s;
+    if(userSkills.length) sum+=' Based on your '+userSkills.length+' saved skill'+(userSkills.length>1?'s':'')+', your match scores have been adjusted.';
+    renderAll({
+      careerTitle:best.t, summary:sum,
+      recommendations:recs.map(function(r){return{icon:r.i,name:r.n,description:r.d,why:r.w,priority:r.p,matchScore:r.m,tags:r.t,category:'technical'};}),
+      skillGaps:best.g.map(function(g){return{icon:g.i,name:g.n,reason:g.r};}),
+      roadmap:best.rm.map(function(s){return{phase:s.p,title:s.t,skills:s.s};}),
+      trending:best.tr.map(function(t){return{name:t.n,category:t.c,growth:t.g,demand:t.d};})
+    });
+  } else {
+    /* Truly unknown career — still give structured, helpful output */
+    renderAll({
+      careerTitle:career.charAt(0).toUpperCase()+career.slice(1),
+      summary:'Here is a personalised skill roadmap for a '+career+' career. Paste your Anthropic API key above to get fully AI-generated, career-specific recommendations.',
+      recommendations:[
+        {icon:'💡',name:'Core Domain Knowledge',description:'Deep expertise in the foundational subjects of '+career+'.',why:'Domain knowledge separates professionals from beginners.',priority:'high',matchScore:92,tags:['core'],category:'technical'},
+        {icon:'🗣️',name:'Professional Communication',description:'Clear written and verbal skills for '+career+' environments.',why:'Communication is the #1 skill cited by employers in every field.',priority:'high',matchScore:88,tags:['core','hot'],category:'soft'},
+        {icon:'📊',name:'Data Literacy & Analytics',description:'Making data-driven decisions with Excel or similar tools.',why:'Data-driven professionals are promoted faster in every field.',priority:'high',matchScore:85,tags:['trending'],category:'technical'},
+        {icon:'🧩',name:'Problem Solving & Critical Thinking',description:'Structured approach to complex challenges in '+career+'.',why:'Top skill in every hiring survey across all industries.',priority:'high',matchScore:90,tags:['core','hot'],category:'soft'},
+        {icon:'🤖',name:'AI & Productivity Tools',description:'Using ChatGPT, Copilot, and AI tools to work smarter.',why:'Professionals using AI are 40% more productive.',priority:'medium',matchScore:86,tags:['hot','trending'],category:'technical'},
+        {icon:'🌐',name:'Networking & Personal Brand',description:'LinkedIn, portfolio, and building industry connections.',why:'50% of opportunities come through referrals.',priority:'medium',matchScore:80,tags:['trending'],category:'soft'}
+      ],
+      skillGaps:[
+        {icon:'⚠️',name:'Industry Certifications',reason:'Certifications validate your skills to employers in '+career+'.'},
+        {icon:'⚠️',name:'Practical Portfolio',reason:'Real projects demonstrate ability better than certificates.'},
+        {icon:'⚠️',name:'Industry Mentorship',reason:'Learning from experienced '+career+'s accelerates growth 3x.'}
+      ],
+      roadmap:[
+        {phase:'Month 1-2',title:'Build Foundations',skills:['Core Concepts','Online Courses','Industry Research','Find a Mentor']},
+        {phase:'Month 3-4',title:'Hands-on Practice',skills:['Personal Projects','Certifications','Community Forums','Skill Building']},
+        {phase:'Month 5-6',title:'Deepen & Specialise',skills:['Advanced Topics','Real Projects','Networking','Portfolio Building']},
+        {phase:'Month 7+',title:'Launch Career',skills:['Job Applications','Interview Prep','LinkedIn Optimisation','Continuous Learning']}
+      ],
+      trending:[
+        {name:'AI & Automation Skills',category:'Technical',growth:'+280%',demand:'Extremely High'},
+        {name:'Cloud Computing',category:'Technical',growth:'+160%',demand:'Very High'},
+        {name:'Data Analytics',category:'Technical',growth:'+130%',demand:'Very High'},
+        {name:'Emotional Intelligence',category:'Soft Skill',growth:'+100%',demand:'High'},
+        {name:'Remote Collaboration',category:'Soft Skill',growth:'+90%',demand:'High'},
+        {name:'Continuous Learning',category:'Soft Skill',growth:'+85%',demand:'High'}
+      ]
+    });
+  }
+}
+
+/* ── setState ── */
+function setState(s){
+  document.getElementById('welcome').style.display=s==='welcome'?'block':'none';
+  document.getElementById('loader').className=s==='loading'?'loader show':'loader';
+  document.getElementById('results').style.display=s==='results'?'block':'none';
+  document.getElementById('searchBtn').disabled=s==='loading';
+  document.getElementById('searchBtn').textContent=s==='loading'?'Analysing…':'Get Recommendations →';
+}
+function showErr(m){var b=document.getElementById('errBox');b.innerHTML='⚠️ '+m;b.style.display='block';}
+function hideErr(){document.getElementById('errBox').style.display='none';}
+function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show');},3000);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+/* ── Init ── */
+refreshSetupCard();
+setState('welcome');
+
+/* Immediately warn if opened as file:// */
+if(window.location.href.indexOf('file://')===0){
+  document.getElementById('errBox').innerHTML =
+    '<strong>⚠️ Opened as file:// — Claude AI will NOT work here.</strong><br><br>'+
+    'To fix: Open VS Code → Right-click this file → <strong>Open with Live Server</strong><br>'+
+    'This runs it at <code>http://localhost:5500</code> where Claude AI works perfectly.<br>'+
+    'Live Server extension is free and takes 1 minute to install.';
+  document.getElementById('errBox').style.display='block';
+}
+</script>
+</body>
+</html>
